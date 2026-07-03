@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>建仓期异常交易扫描报告</title>
+<style>
+:root {
+  --bg: #0a0e14;
+  --card: #131820;
+  --border: #1e2936;
+  --text: #c8d6e5;
+  --text-dim: #6b7d95;
+  --accent: #f0a040;
+  --accent2: #40b8f0;
+  --danger: #e0556a;
+  --success: #4ecb71;
+  --warn: #f0c040;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 48px 0 36px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.header .subtitle {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+/* KPI Cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.kpi-card:hover { border-color: var(--accent); }
+.kpi-card .value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+.kpi-card .value.accent { color: var(--accent); }
+.kpi-card .value.accent2 { color: var(--accent2); }
+.kpi-card .value.danger { color: var(--danger); }
+.kpi-card .value.success { color: var(--success); }
+.kpi-card .label {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* Section */
+.section {
+  margin-bottom: 32px;
+}
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16px;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+}
+
+/* Grid 2-col */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Card */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* Bar Chart */
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { width: 110px; font-size: 0.82rem; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 22px; background: var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+  display: flex; align-items: center; padding-left: 8px;
+  font-size: 0.75rem; font-weight: 600; color: #fff;
+}
+.bar-fill.d8 { background: linear-gradient(90deg, #5b7fff, #3d5ce5); }
+.bar-fill.d9 { background: linear-gradient(90deg, #f0a040, #d08020); }
+.bar-fill.d10 { background: linear-gradient(90deg, #4ecb71, #2ea050); }
+.bar-fill.d11 { background: linear-gradient(90deg, #e0556a, #c03050); }
+.bar-fill.d12 { background: linear-gradient(90deg, #40b8f0, #2090d0); }
+.bar-fill.d13 { background: linear-gradient(90deg, #a855f7, #8030d0); }
+.bar-fill.d14 { background: linear-gradient(90deg, #14b8a6, #0d9488); }
+
+/* Histogram */
+.hist-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.hist-label { width: 70px; font-size: 0.78rem; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+.hist-bar { flex: 1; height: 20px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.hist-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s; }
+.hist-count { width: 36px; font-size: 0.78rem; color: var(--text); text-align: left; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th { text-align: left; padding: 10px 12px; color: var(--text-dim); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid var(--border); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: rgba(255,255,255,0.02); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.72rem; font-weight: 600;
+}
+.badge.manipulation { background: rgba(240,160,64,0.15); color: var(--accent); }
+.badge.insider { background: rgba(224,85,106,0.15); color: var(--danger); }
+.badge.high { background: rgba(224,85,106,0.12); color: var(--danger); }
+.badge.mid { background: rgba(240,192,64,0.12); color: var(--warn); }
+.badge.strong { background: rgba(78,203,113,0.12); color: var(--success); }
+.badge.suspect { background: rgba(240,192,64,0.12); color: var(--warn); }
+
+/* Combo list */
+.combo-list { list-style: none; }
+.combo-list li {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-size: 0.84rem;
+}
+.combo-list li:last-child { border-bottom: none; }
+.combo-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.combo-tag {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 0.7rem; font-weight: 600; background: rgba(240,160,64,0.12); color: var(--accent);
+}
+.combo-count { color: var(--text-dim); font-size: 0.82rem; }
+
+/* Co-occurrence */
+.cooccur-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.cooccur-item {
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 0.75rem; background: rgba(64,184,240,0.08);
+  border: 1px solid rgba(64,184,240,0.2);
+  color: var(--accent2);
+}
+
+/* Footer */
+.footer {
+  text-align: center; padding: 32px 0;
+  color: var(--text-dim); font-size: 0.78rem;
+  border-top: 1px solid var(--border); margin-top: 32px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Responsive table */
+.table-wrap { overflow-x: auto; }
+
+/* Signal distribution */
+.signal-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.signal-name { width: 120px; font-size: 0.84rem; color: var(--text); }
+.signal-bar { flex: 1; height: 24px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.signal-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; font-size: 0.78rem; font-weight: 600; color: #fff; }
+.signal-fill.strong { background: linear-gradient(90deg, #4ecb71, #2ea050); }
+.signal-fill.suspect { background: linear-gradient(90deg, #f0c040, #c09020); }
+
+/* Cross table */
+.cross-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.cross-table th, .cross-table td { padding: 8px 14px; text-align: center; border: 1px solid var(--border); }
+.cross-table th { background: rgba(255,255,255,0.03); color: var(--text-dim); font-weight: 600; }
+.cross-table td { color: var(--text); }
+
+/* Tooltip for alert types */
+.alert-types { font-size: 0.78rem; color: var(--text-dim); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>建仓期异常交易扫描报告</h1>
+  <div class="subtitle">基于 93 只监管处罚标的 · 7 维度建仓期检测 · D8-D14</div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid" id="kpi"></div>
+
+<!-- Dimension Bar Chart + Histogram -->
+<div class="grid-2">
+  <div class="card">
+    <div class="section-title">各维度检出率</div>
+    <div class="bar-chart" id="dimChart"></div>
+  </div>
+  <div class="card">
+    <div class="section-title">告警天数分布</div>
+    <div id="histogram"></div>
+  </div>
+</div>
+
+<!-- Signal + Cross -->
+<div class="grid-2" style="margin-top:16px">
+  <div class="card">
+    <div class="section-title">建仓信号分布</div>
+    <div id="signalDist"></div>
+  </div>
+  <div class="card">
+    <div class="section-title">违规类型 × 建仓信号</div>
+    <div id="crossTable"></div>
+  </div>
+</div>
+
+<!-- Top 10 + Combo -->
+<div class="grid-2" style="margin-top:16px">
+  <div class="card">
+    <div class="section-title">Top 10 告警天数最多的标的</div>
+    <div class="table-wrap"><table id="top10Table"></table></div>
+  </div>
+  <div class="card">
+    <div class="section-title">最常见的维度组合</div>
+    <ul class="combo-list" id="comboList"></ul>
+  </div>
+</div>
+
+<!-- Co-occurrence -->
+<div class="section" style="margin-top:16px">
+  <div class="card">
+    <div class="section-title">维度共现矩阵（同时触发的维度对）</div>
+    <div class="cooccur-grid" id="cooccurGrid"></div>
+  </div>
+</div>
+
+<!-- Insider -->
+<div class="section" style="margin-top:16px">
+  <div class="card">
+    <div class="section-title">内幕交易标的建仓分析</div>
+    <div class="table-wrap"><table id="insiderTable"></table></div>
+  </div>
+</div>
+
+<!-- Full table -->
+<div class="section" style="margin-top:16px">
+  <div class="card">
+    <div class="section-title">全部标的扫描结果（共 <span id="totalCount">-</span> 只）</div>
+    <div class="table-wrap"><table id="fullTable"></table></div>
+  </div>
+</div>
+
+<div class="footer">
+  数据来源：证监会行政处罚决定书 · 检测引擎：abnormal-trading-detection v2 · 检测窗口：[建仓日-30, 建仓日+20]
+</div>
+
+</div>
+
+<script>
+const DATA = {"total": 92, "manipulation": "88", "insider": "4", "high_risk": "90", "mid_risk": "2", "sig_strong": "88", "sig_suspect": "4", "avg_days": 20.6, "median_days": 21, "max_days": 37, "avg_window": 0.0, "dim_stats": [{"id": "D8", "name": "建仓前地量", "count": 40, "pct": 43.5}, {"id": "D9", "name": "温和放量启动", "count": 90, "pct": 97.8}, {"id": "D10", "name": "价稳量增", "count": 62, "pct": 67.4}, {"id": "D11", "name": "换手率爬升", "count": 69, "pct": 75.0}, {"id": "D12", "name": "量能堆积", "count": 90, "pct": 97.8}, {"id": "D13", "name": "窄幅吸筹", "count": 23, "pct": 25.0}, {"id": "D14", "name": "建仓前后量比", "count": 45, "pct": 48.9}], "top10": [{"ts_code": "000903.SZ", "name": "云内动力", "violation_type": "操纵市场", "total_alert_days": 37, "alert_types": "D10,D11,D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000990.SZ", "name": "诚志股份", "violation_type": "操纵市场", "total_alert_days": 35, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600307.SH", "name": "酒钢宏兴", "violation_type": "操纵市场", "total_alert_days": 33, "alert_types": "D10,D11,D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300119.SZ", "name": "瑞普生物", "violation_type": "操纵市场", "total_alert_days": 32, "alert_types": "D11,D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300313.SZ", "name": "天山生物", "violation_type": "操纵市场", "total_alert_days": 32, "alert_types": "D10,D11,D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603042.SH", "name": "华脉科技", "violation_type": "操纵市场", "total_alert_days": 31, "alert_types": "D10,D11,D12,D13,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000812.SZ", "name": "陕西金叶", "violation_type": "操纵市场", "total_alert_days": 30, "alert_types": "D10,D11,D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002403.SZ", "name": "爱仕达", "violation_type": "操纵市场", "total_alert_days": 30, "alert_types": "D10,D11,D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300341.SZ", "name": "麦迪电气", "violation_type": "操纵市场", "total_alert_days": 30, "alert_types": "D10,D11,D12,D13,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300343.SZ", "name": "联创股份", "violation_type": "操纵市场", "total_alert_days": 30, "alert_types": "D12,D14,D9", "accumulation_signal": "建仓特征显著"}], "hist": {"1-5天": 2, "6-10天": 5, "11-15天": 16, "16-20天": 22, "21-25天": 22, "26-30天": 19, "30天+": 6}, "signal_dist": {"建仓特征显著": 88, "疑似建仓": 4}, "combo": {"D10,D11,D12,D14,D9": 17, "D10,D11,D12,D9": 7, "D11,D12,D9": 7, "D10,D11,D12,D13,D14,D8,D9": 6, "D11,D12,D8,D9": 6, "D10,D11,D12,D13,D8,D9": 5, "D10,D11,D12,D8,D9": 5, "D12,D8,D9": 4, "D11,D12,D14,D9": 4, "D10,D12,D13,D8,D9": 3}, "insider_list": [{"ts_code": "603388.SH", "name": "元成股份", "total_alert_days": 19, "alert_types": "D12,D14,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300125.SZ", "name": "聆达股份", "total_alert_days": 15, "alert_types": "D10,D11,D12,D9", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603007.SH", "name": "花王股份", "total_alert_days": 12, "alert_types": "D12,D9", "accumulation_signal": "疑似建仓"}, {"ts_code": "000530.SZ", "name": "冰山冷热", "total_alert_days": 10, "alert_types": "D11,D12,D9", "accumulation_signal": "建仓特征显著"}], "cooccur": {"D8-D9": 39, "D10-D8": 26, "D10-D9": 62, "D10-D11": 49, "D10-D12": 61, "D10-D13": 23, "D10-D14": 37, "D11-D8": 27, "D11-D9": 67, "D11-D12": 68, "D11-D13": 16, "D11-D14": 34, "D12-D8": 39, "D12-D9": 88, "D12-D13": 23, "D12-D14": 45, "D13-D8": 15, "D13-D9": 23, "D13-D14": 12, "D14-D8": 15, "D14-D9": 45}, "all_stocks": [{"ts_code": "000903.SZ", "name": "云内动力", "violation_type": "操纵市场", "window_start": 20200211, "window_end": 20200401, "total_alert_days": 37, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000990.SZ", "name": "诚志股份", "violation_type": "操纵市场", "window_start": 20190209, "window_end": 20190331, "total_alert_days": 35, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600307.SH", "name": "酒钢宏兴", "violation_type": "操纵市场", "window_start": 20150314, "window_end": 20150503, "total_alert_days": 33, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300119.SZ", "name": "瑞普生物", "violation_type": "操纵市场", "window_start": 20190302, "window_end": 20190421, "total_alert_days": 32, "alert_types": "D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300313.SZ", "name": "天山生物", "violation_type": "操纵市场", "window_start": 20200720, "window_end": 20200908, "total_alert_days": 32, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603042.SH", "name": "华脉科技", "violation_type": "操纵市场", "window_start": 20230128, "window_end": 20230319, "total_alert_days": 31, "alert_types": "D10,D11,D12,D13,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000812.SZ", "name": "陕西金叶", "violation_type": "操纵市场", "window_start": 20181022, "window_end": 20181211, "total_alert_days": 30, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002403.SZ", "name": "爱仕达", "violation_type": "操纵市场", "window_start": 20220327, "window_end": 20220516, "total_alert_days": 30, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300341.SZ", "name": "麦迪电气", "violation_type": "操纵市场", "window_start": 20170610, "window_end": 20170730, "total_alert_days": 30, "alert_types": "D10,D11,D12,D13,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300343.SZ", "name": "联创股份", "violation_type": "操纵市场", "window_start": 20210612, "window_end": 20210801, "total_alert_days": 30, "alert_types": "D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000703.SZ", "name": "恒逸石化", "violation_type": "操纵市场", "window_start": 20171119, "window_end": 20180108, "total_alert_days": 29, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002890.SZ", "name": "弘宇股份", "violation_type": "操纵市场", "window_start": 20180228, "window_end": 20180419, "total_alert_days": 29, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300378.SZ", "name": "鼎捷软件", "violation_type": "操纵市场", "window_start": 20190212, "window_end": 20190403, "total_alert_days": 29, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600719.SH", "name": "大连热电", "violation_type": "操纵市场", "window_start": 20200226, "window_end": 20200416, "total_alert_days": 29, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603613.SH", "name": "国联股份", "violation_type": "操纵市场", "window_start": 20201212, "window_end": 20210131, "total_alert_days": 29, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300587.SZ", "name": "天铁股份", "violation_type": "操纵市场", "window_start": 20181119, "window_end": 20190108, "total_alert_days": 28, "alert_types": "D10,D11,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603665.SH", "name": "康隆达", "violation_type": "操纵市场", "window_start": 20170821, "window_end": 20171010, "total_alert_days": 28, "alert_types": "D10,D11,D12,D13,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000958.SZ", "name": "东方能源", "violation_type": "操纵市场", "window_start": 20190119, "window_end": 20190310, "total_alert_days": 27, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000985.SZ", "name": "大庆华科", "violation_type": "操纵市场", "window_start": 20200603, "window_end": 20200723, "total_alert_days": 27, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600211.SH", "name": "西藏药业", "violation_type": "操纵市场", "window_start": 20200425, "window_end": 20200614, "total_alert_days": 27, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600300.SH", "name": "维维股份", "violation_type": "操纵市场", "window_start": 20170911, "window_end": 20171031, "total_alert_days": 27, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603055.SH", "name": "台华新材", "violation_type": "操纵市场", "window_start": 20190821, "window_end": 20191010, "total_alert_days": 26, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603136.SH", "name": "天目湖", "violation_type": "操纵市场", "window_start": 20190703, "window_end": 20190822, "total_alert_days": 26, "alert_types": "D10,D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603822.SH", "name": "嘉澳环保", "violation_type": "操纵市场", "window_start": 20181215, "window_end": 20190203, "total_alert_days": 26, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603937.SH", "name": "丽岛新材", "violation_type": "操纵市场", "window_start": 20200223, "window_end": 20200413, "total_alert_days": 26, "alert_types": "D10,D11,D12,D13,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000538.SZ", "name": "云南白药", "violation_type": "操纵市场", "window_start": 20180717, "window_end": 20180905, "total_alert_days": 25, "alert_types": "D10,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603908.SH", "name": "牧高笛", "violation_type": "操纵市场", "window_start": 20190316, "window_end": 20190505, "total_alert_days": 25, "alert_types": "D10,D12,D13,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600281.SH", "name": "太化股份", "violation_type": "操纵市场", "window_start": 20150516, "window_end": 20150705, "total_alert_days": 24, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603116.SH", "name": "红蜻蜓", "violation_type": "操纵市场", "window_start": 20170624, "window_end": 20170813, "total_alert_days": 24, "alert_types": "D10,D11,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002711.SZ", "name": "欧浦智网", "violation_type": "操纵市场", "window_start": 20180428, "window_end": 20180617, "total_alert_days": 23, "alert_types": "D10,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002752.SZ", "name": "昇兴股份", "violation_type": "操纵市场", "window_start": 20191110, "window_end": 20191230, "total_alert_days": 23, "alert_types": "D10,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600251.SH", "name": "冠农股份", "violation_type": "操纵市场", "window_start": 20170628, "window_end": 20170817, "total_alert_days": 23, "alert_types": "D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600488.SH", "name": "天药股份", "violation_type": "操纵市场", "window_start": 20180318, "window_end": 20180507, "total_alert_days": 23, "alert_types": "D10,D12,D13,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "601368.SH", "name": "绿城水务", "violation_type": "操纵市场", "window_start": 20200407, "window_end": 20200527, "total_alert_days": 23, "alert_types": "D10,D11,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000723.SZ", "name": "美锦能源", "violation_type": "操纵市场", "window_start": 20150429, "window_end": 20150618, "total_alert_days": 22, "alert_types": "D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600116.SH", "name": "三峡水利", "violation_type": "操纵市场", "window_start": 20181225, "window_end": 20190213, "total_alert_days": 22, "alert_types": "D10,D12,D13,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600243.SH", "name": "青海华鼎", "violation_type": "操纵市场", "window_start": 20190213, "window_end": 20190404, "total_alert_days": 22, "alert_types": "D10,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600306.SH", "name": "商业城", "violation_type": "操纵市场", "window_start": 20200204, "window_end": 20200325, "total_alert_days": 22, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603036.SH", "name": "如通股份", "violation_type": "操纵市场", "window_start": 20190724, "window_end": 20190912, "total_alert_days": 22, "alert_types": "D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603178.SH", "name": "圣龙股份", "violation_type": "操纵市场", "window_start": 20190119, "window_end": 20190310, "total_alert_days": 22, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603321.SH", "name": "梅轮电梯", "violation_type": "操纵市场", "window_start": 20181225, "window_end": 20190213, "total_alert_days": 22, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "688068.SH", "name": "热景生物", "violation_type": "操纵市场", "window_start": 20201121, "window_end": 20210110, "total_alert_days": 22, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600853.SH", "name": "龙建股份", "violation_type": "操纵市场", "window_start": 20181020, "window_end": 20181209, "total_alert_days": 21, "alert_types": "D10,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "601226.SH", "name": "华电重工", "violation_type": "操纵市场", "window_start": 20180818, "window_end": 20181007, "total_alert_days": 21, "alert_types": "D10,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603239.SH", "name": "浙江仙通", "violation_type": "操纵市场", "window_start": 20190511, "window_end": 20190630, "total_alert_days": 21, "alert_types": "D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603721.SH", "name": "中广天择", "violation_type": "操纵市场", "window_start": 20180217, "window_end": 20180408, "total_alert_days": 21, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603809.SH", "name": "豪能股份", "violation_type": "操纵市场", "window_start": 20190813, "window_end": 20191002, "total_alert_days": 21, "alert_types": "D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300263.SZ", "name": "隆华节能", "violation_type": "操纵市场", "window_start": 20170617, "window_end": 20170806, "total_alert_days": 20, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603877.SH", "name": "太平鸟", "violation_type": "操纵市场", "window_start": 20170527, "window_end": 20170716, "total_alert_days": 20, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600793.SH", "name": "宜宾纸业", "violation_type": "操纵市场", "window_start": 20200328, "window_end": 20200517, "total_alert_days": 19, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603090.SH", "name": "宏盛股份", "violation_type": "操纵市场", "window_start": 20190701, "window_end": 20190820, "total_alert_days": 19, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603388.SH", "name": "元成股份", "violation_type": "内幕交易", "window_start": 20170526, "window_end": 20170715, "total_alert_days": 19, "alert_types": "D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603586.SH", "name": "金麒麟", "violation_type": "操纵市场", "window_start": 20170723, "window_end": 20170911, "total_alert_days": 19, "alert_types": "D10,D11,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603677.SH", "name": "奇精机械", "violation_type": "操纵市场", "window_start": 20190622, "window_end": 20190811, "total_alert_days": 19, "alert_types": "D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002044.SZ", "name": "美年健康", "violation_type": "操纵市场", "window_start": 20190630, "window_end": 20190819, "total_alert_days": 18, "alert_types": "D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002147.SZ", "name": "新光圆成", "violation_type": "操纵市场", "window_start": 20171119, "window_end": 20180108, "total_alert_days": 18, "alert_types": "D10,D11,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002493.SZ", "name": "荣盛石化", "violation_type": "操纵市场", "window_start": 20230109, "window_end": 20230228, "total_alert_days": 18, "alert_types": "D10,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600333.SH", "name": "长春燃气", "violation_type": "操纵市场", "window_start": 20170109, "window_end": 20170228, "total_alert_days": 18, "alert_types": "D10,D11,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603008.SH", "name": "喜临门", "violation_type": "操纵市场", "window_start": 20180909, "window_end": 20181029, "total_alert_days": 18, "alert_types": "D11,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002178.SZ", "name": "延华智能", "violation_type": "操纵市场", "window_start": 20171121, "window_end": 20180110, "total_alert_days": 17, "alert_types": "D10,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002319.SZ", "name": "乐通股份", "violation_type": "操纵市场", "window_start": 20180620, "window_end": 20180809, "total_alert_days": 17, "alert_types": "D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002464.SZ", "name": "众应互联", "violation_type": "操纵市场", "window_start": 20171001, "window_end": 20171120, "total_alert_days": 17, "alert_types": "D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300605.SZ", "name": "恒锋信息", "violation_type": "操纵市场", "window_start": 20171203, "window_end": 20180122, "total_alert_days": 17, "alert_types": "D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600587.SH", "name": "新华医疗", "violation_type": "操纵市场", "window_start": 20180225, "window_end": 20180416, "total_alert_days": 17, "alert_types": "D10,D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603238.SH", "name": "诺邦股份", "violation_type": "操纵市场", "window_start": 20181121, "window_end": 20190110, "total_alert_days": 17, "alert_types": "D10,D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603319.SH", "name": "湘油泵", "violation_type": "操纵市场", "window_start": 20170514, "window_end": 20170703, "total_alert_days": 17, "alert_types": "D10,D11,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002713.SZ", "name": "东易日盛", "violation_type": "操纵市场", "window_start": 20220405, "window_end": 20220525, "total_alert_days": 16, "alert_types": "D10,D11,D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603767.SH", "name": "中马传动", "violation_type": "操纵市场", "window_start": 20180204, "window_end": 20180326, "total_alert_days": 16, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603985.SH", "name": "恒润股份", "violation_type": "操纵市场", "window_start": 20180204, "window_end": 20180326, "total_alert_days": 16, "alert_types": "D10,D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300125.SZ", "name": "聆达股份", "violation_type": "内幕交易", "window_start": 20220521, "window_end": 20220710, "total_alert_days": 15, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600561.SH", "name": "江西长运", "violation_type": "操纵市场", "window_start": 20191026, "window_end": 20191215, "total_alert_days": 15, "alert_types": "D10,D11,D12,D13,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603159.SH", "name": "上海亚虹", "violation_type": "操纵市场", "window_start": 20180204, "window_end": 20180326, "total_alert_days": 15, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603555.SH", "name": "贵人鸟", "violation_type": "操纵市场", "window_start": 20150415, "window_end": 20150604, "total_alert_days": 15, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603679.SH", "name": "华体科技", "violation_type": "操纵市场", "window_start": 20170618, "window_end": 20170807, "total_alert_days": 15, "alert_types": "D11,D12", "risk_level": "高", "accumulation_signal": "疑似建仓"}, {"ts_code": "603758.SH", "name": "秦安股份", "violation_type": "操纵市场", "window_start": 20180204, "window_end": 20180326, "total_alert_days": 15, "alert_types": "D10,D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603926.SH", "name": "铁流股份", "violation_type": "操纵市场", "window_start": 20170716, "window_end": 20170904, "total_alert_days": 15, "alert_types": "D11,D12,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002331.SZ", "name": "皖通科技", "violation_type": "操纵市场", "window_start": 20180908, "window_end": 20181028, "total_alert_days": 14, "alert_types": "D12,D14,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "600982.SH", "name": "宁波热电", "violation_type": "操纵市场", "window_start": 20200413, "window_end": 20200602, "total_alert_days": 14, "alert_types": "D10,D11,D12,D13,D14,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603218.SH", "name": "日月股份", "violation_type": "操纵市场", "window_start": 20170620, "window_end": 20170809, "total_alert_days": 14, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300250.SZ", "name": "初灵信息", "violation_type": "操纵市场", "window_start": 20170711, "window_end": 20170830, "total_alert_days": 13, "alert_types": "D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603058.SH", "name": "永吉股份", "violation_type": "操纵市场", "window_start": 20200315, "window_end": 20200504, "total_alert_days": 13, "alert_types": "D10,D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603577.SH", "name": "汇金通", "violation_type": "操纵市场", "window_start": 20170204, "window_end": 20170326, "total_alert_days": 13, "alert_types": "D12,D9", "risk_level": "高", "accumulation_signal": "疑似建仓"}, {"ts_code": "603007.SH", "name": "花王股份", "violation_type": "内幕交易", "window_start": 20161106, "window_end": 20161226, "total_alert_days": 12, "alert_types": "D12,D9", "risk_level": "高", "accumulation_signal": "疑似建仓"}, {"ts_code": "603286.SH", "name": "日盈电子", "violation_type": "操纵市场", "window_start": 20170717, "window_end": 20170905, "total_alert_days": 11, "alert_types": "D10,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603518.SH", "name": "维格娜丝", "violation_type": "操纵市场", "window_start": 20170625, "window_end": 20170814, "total_alert_days": 11, "alert_types": "D10,D11,D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000530.SZ", "name": "冰山冷热", "violation_type": "内幕交易", "window_start": 20220521, "window_end": 20220710, "total_alert_days": 10, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "300256.SZ", "name": "*ST星星", "violation_type": "操纵市场", "window_start": 20211018, "window_end": 20211207, "total_alert_days": 10, "alert_types": "D11,D12,D8", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000659.SZ", "name": "*ST中富", "violation_type": "操纵市场", "window_start": 20150809, "window_end": 20150928, "total_alert_days": 9, "alert_types": "D11,D12,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "002093.SZ", "name": "国脉科技", "violation_type": "操纵市场", "window_start": 20150815, "window_end": 20151004, "total_alert_days": 9, "alert_types": "D12,D8,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "603139.SH", "name": "康惠制药", "violation_type": "操纵市场", "window_start": 20170527, "window_end": 20170716, "total_alert_days": 8, "alert_types": "D10,D12,D13,D9", "risk_level": "高", "accumulation_signal": "建仓特征显著"}, {"ts_code": "000683.SZ", "name": "远兴能源", "violation_type": "操纵市场", "window_start": 20170501, "window_end": 20170620, "total_alert_days": 5, "alert_types": "D8,D9", "risk_level": "中", "accumulation_signal": "疑似建仓"}, {"ts_code": "002418.SZ", "name": "康盛股份", "violation_type": "操纵市场", "window_start": 20170624, "window_end": 20170813, "total_alert_days": 5, "alert_types": "D10,D11,D9", "risk_level": "中", "accumulation_signal": "建仓特征显著"}], "cross": {"建仓特征显著": {"内幕交易": 3, "操纵市场": 85}, "疑似建仓": {"内幕交易": 1, "操纵市场": 3}}};
+
+// KPI
+document.getElementById('kpi').innerHTML = `
+  <div class="kpi-card"><div class="value accent">${DATA.total}</div><div class="label">检出标的</div></div>
+  <div class="kpi-card"><div class="value accent2">${DATA.avg_days}</div><div class="label">平均告警天数</div></div>
+  <div class="kpi-card"><div class="value">${DATA.median_days}</div><div class="label">中位数告警天数</div></div>
+  <div class="kpi-card"><div class="value danger">${DATA.high_risk}</div><div class="label">高风险标的</div></div>
+  <div class="kpi-card"><div class="value success">${DATA.sig_strong}</div><div class="label">建仓特征显著</div></div>
+  <div class="kpi-card"><div class="value">${DATA.manipulation} / ${DATA.insider}</div><div class="label">操纵市场 / 内幕交易</div></div>
+`;
+
+// Dimension chart
+const colors = {D8:'d8',D9:'d9',D10:'d10',D11:'d11',D12:'d12',D13:'d13',D14:'d14'};
+document.getElementById('dimChart').innerHTML = DATA.dim_stats.map(d =>
+  `<div class="bar-row">
+    <span class="bar-label">${d.name}</span>
+    <div class="bar-track"><div class="bar-fill ${colors[d.id]}" style="width:${d.pct}%">${d.count}只 (${d.pct}%)</div></div>
+  </div>`
+).join('');
+
+// Histogram
+const maxHist = Math.max(...Object.values(DATA.hist));
+document.getElementById('histogram').innerHTML = Object.entries(DATA.hist).map(([k,v]) =>
+  `<div class="hist-row">
+    <span class="hist-label">${k}</span>
+    <div class="hist-bar"><div class="hist-fill" style="width:${(v/maxHist*100).toFixed(0)}%"></div></div>
+    <span class="hist-count">${v}</span>
+  </div>`
+).join('');
+
+// Signal distribution
+const maxSig = Math.max(...Object.values(DATA.signal_dist));
+document.getElementById('signalDist').innerHTML = Object.entries(DATA.signal_dist).map(([k,v]) =>
+  `<div class="signal-row">
+    <span class="signal-name">${k}</span>
+    <div class="signal-bar"><div class="signal-fill ${k==='建仓特征显著'?'strong':'suspect'}" style="width:${(v/maxSig*100).toFixed(0)}%">${v} 只 (${(v/DATA.total*100).toFixed(1)}%)</div></div>
+  </div>`
+).join('');
+
+// Cross table
+const crossTypes = Object.keys(DATA.cross);
+const crossSigs = ['建仓特征显著', '疑似建仓'];
+document.getElementById('crossTable').innerHTML = `
+  <table class="cross-table">
+    <tr><th>违规类型</th>${crossSigs.map(s=>`<th>${s}</th>`).join('')}<th>合计</th></tr>
+    ${crossTypes.map(t => {
+      const row = DATA.cross[t] || {};
+      const total = (row['建仓特征显著']||0) + (row['疑似建仓']||0);
+      return `<tr><td>${t}</td>${crossSigs.map(s=>`<td>${row[s]||0}</td>`).join('')}<td><strong>${total}</strong></td></tr>`;
+    }).join('')}
+  </table>
+`;
+
+// Top 10
+document.getElementById('top10Table').innerHTML = `
+  <tr><th>#</th><th>代码</th><th>名称</th><th>类型</th><th>告警天</th><th>触发维度</th><th>信号</th></tr>
+  ${DATA.top10.map((s,i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td>${s.ts_code}</td>
+      <td>${s.name}</td>
+      <td><span class="badge ${s.violation_type==='操纵市场'?'manipulation':'insider'}">${s.violation_type}</span></td>
+      <td><strong>${s.total_alert_days}</strong></td>
+      <td><span class="alert-types" title="${s.alert_types}">${s.alert_types}</span></td>
+      <td><span class="badge ${s.accumulation_signal==='建仓特征显著'?'strong':'suspect'}">${s.accumulation_signal}</span></td>
+    </tr>
+  `).join('')}
+`;
+
+// Combo
+document.getElementById('comboList').innerHTML = Object.entries(DATA.combo).map(([k,v]) => `
+  <li>
+    <span class="combo-tags">${k.split(',').map(t=>`<span class="combo-tag">${t}</span>`).join('')}</span>
+    <span class="combo-count">${v} 只</span>
+  </li>
+`).join('');
+
+// Co-occurrence
+const cooccurSorted = Object.entries(DATA.cooccur).sort((a,b) => b[1]-a[1]);
+document.getElementById('cooccurGrid').innerHTML = cooccurSorted.map(([k,v]) =>
+  `<span class="cooccur-item">${k.replace('-',' × ')}: ${v}只</span>`
+).join('');
+
+// Insider
+document.getElementById('insiderTable').innerHTML = `
+  <tr><th>代码</th><th>名称</th><th>告警天</th><th>触发维度</th><th>信号</th></tr>
+  ${DATA.insider_list.map(s => `
+    <tr>
+      <td>${s.ts_code}</td>
+      <td>${s.name}</td>
+      <td><strong>${s.total_alert_days}</strong></td>
+      <td><span class="alert-types">${s.alert_types}</span></td>
+      <td><span class="badge ${s.accumulation_signal==='建仓特征显著'?'strong':'suspect'}">${s.accumulation_signal}</span></td>
+    </tr>
+  `).join('')}
+`;
+
+// Full table
+document.getElementById('totalCount').textContent = DATA.total;
+document.getElementById('fullTable').innerHTML = `
+  <tr><th>代码</th><th>名称</th><th>类型</th><th>窗口起始</th><th>窗口结束</th><th>告警天</th><th>触发维度</th><th>风险</th><th>信号</th></tr>
+  ${DATA.all_stocks.map(s => `
+    <tr>
+      <td>${s.ts_code}</td>
+      <td>${s.name}</td>
+      <td><span class="badge ${s.violation_type==='操纵市场'?'manipulation':'insider'}">${s.violation_type}</span></td>
+      <td>${s.window_start}</td>
+      <td>${s.window_end}</td>
+      <td><strong>${s.total_alert_days}</strong></td>
+      <td><span class="alert-types" title="${s.alert_types}">${s.alert_types}</span></td>
+      <td><span class="badge ${s.risk_level==='高'?'high':'mid'}">${s.risk_level}</span></td>
+      <td><span class="badge ${s.accumulation_signal==='建仓特征显著'?'strong':'suspect'}">${s.accumulation_signal||'-'}</span></td>
+    </tr>
+  `).join('')}
+`;
+</script>
+</body>
+</html>

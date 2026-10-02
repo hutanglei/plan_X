@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIC创新药管线进展跟踪看板</title>
+<style>
+:root{
+  --bg:#f5f7fa; --card:#ffffff; --border:#e4e7ed; --text:#303133;
+  --text-2:#606266; --text-3:#909399; --primary:#409eff; --green:#67c23a;
+  --yellow:#e6a23c; --orange:#f56c6c; --red:#c0392b; --dark:#8b0000;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding:20px;line-height:1.5}
+h1{font-size:22px;margin-bottom:4px}
+.sub{color:var(--text-3);font-size:13px;margin-bottom:18px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 18px;min-width:130px;flex:1}
+.stat .num{font-size:26px;font-weight:700;line-height:1.2}
+.stat .lbl{font-size:12px;color:var(--text-3);margin-top:4px}
+.stat.s0 .num{color:var(--green)} .stat.s1 .num{color:#85ce61}
+.stat.s2 .num{color:var(--yellow)} .stat.s3 .num{color:var(--orange)}
+.stat.s4 .num{color:var(--red)} .stat.s5 .num{color:var(--dark)}
+.stat.total .num{color:var(--primary)}
+.toolbar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar .tg{font-weight:600;font-size:13px;color:var(--text-2);margin-right:6px}
+.btn{border:1px solid var(--border);background:#fff;color:var(--text-2);padding:5px 14px;border-radius:5px;cursor:pointer;font-size:13px;transition:.2s}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:13px}
+thead th{background:#fafafa;color:var(--text-2);font-weight:600;padding:10px 8px;text-align:left;border-bottom:2px solid var(--border);position:sticky;top:0;white-space:nowrap}
+tbody td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+tbody tr:hover{background:#f0f7ff}
+tbody tr.detail-row{background:#fbfcfd}
+tbody tr.detail-row td{padding:0}
+.detail-box{padding:12px 16px;background:#fafbfc;color:var(--text-2);font-size:12px;border-top:1px dashed var(--border)}
+.detail-box b{color:var(--text)}
+.code{font-family:Consolas,monospace;font-size:12px;color:var(--text-3)}
+.name{font-weight:600;color:var(--text)}
+.fic{color:var(--primary);font-weight:500}
+.step{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;font-weight:700;font-size:13px;color:#fff}
+.step.s0{background:var(--green)} .step.s1{background:#85ce61}
+.step.s2{background:var(--yellow)} .step.s3{background:var(--orange)}
+.step.s4{background:var(--red)} .step.s5{background:var(--dark)}
+.t-time{font-size:12px;white-space:nowrap}
+.t-smooth{color:var(--green)} .t-normal{color:var(--yellow)} .t-delay{color:var(--red)}
+.t-done{color:var(--text-3)}
+.stage{font-size:12px;color:var(--text-2)}
+.stage.done{color:var(--green);font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:3px;margin-left:4px}
+.tag.a{background:#ecf5ff;color:var(--primary);border:1px solid #d9ecff}
+.tag.h{background:#fdf6ec;color:var(--yellow);border:1px solid #faecd8}
+.accel{display:inline-block;font-size:10px;padding:0 5px;border-radius:3px;background:#f0f9eb;color:#67c23a;border:1px solid #e1f3d8;margin-left:3px}
+.muted{color:var(--text-3);font-size:12px}
+.foot{margin-top:16px;color:var(--text-3);font-size:12px;text-align:center}
+.foot b{color:var(--text-2)}
+</style>
+</head>
+<body>
+
+<h1>FIC创新药管线进展跟踪看板</h1>
+<div class="sub">数据截止日：2026-07-12 · 覆盖 A股9家 + 港股13家 · 共25条FIC核心管线 · <b>已纳入附条件批准/加速审批路径重算</b>（v2） · 三档时间为行业经验估算（非精确预测）</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="toolbar">
+  <span class="tg">上市地</span>
+  <button class="btn active" data-f="market" data-v="all">全部</button>
+  <button class="btn" data-f="market" data-v="a">A股</button>
+  <button class="btn" data-f="market" data-v="h">港股</button>
+  <span class="tg" style="margin-left:14px">状态</span>
+  <button class="btn active" data-f="status" data-v="all">全部</button>
+  <button class="btn" data-f="status" data-v="done">已上市</button>
+  <button class="btn" data-f="status" data-v="soon">临门一脚(≤1)</button>
+  <button class="btn" data-f="status" data-v="mid">III期中(2-3)</button>
+  <button class="btn" data-f="status" data-v="early">早期(≥4)</button>
+</div>
+
+<table>
+<thead><tr>
+<th>代码</th><th>公司</th><th>FIC品种</th><th>靶点/模态</th><th>适应症</th>
+<th>当前阶段</th><th>步骤</th><th>顺利</th><th>正常</th><th>拖延</th>
+<th>下一关键节点</th><th>预期时间</th><th>地</th>
+</tr></thead>
+<tbody id="tbody"></tbody>
+</table>
+
+<div class="foot">
+  <b>步骤</b>=离上市剩余关键步骤数(0已上市->5早期临床) · <b>顺利/正常/拖延</b>=三档预期上市时间 ·
+  <span class="accel">加速</span>=纳入附条件批准/单臂报产等加速路径 · 行可点击展开查看完整推算链与拖延风险点 · <b>三档时间为行业经验估算，实际以公司公告为准</b>
+</div>
+
+<script>
+const DATA=[
+["688506.SH","百利天恒","BL-B01D1(宜泽康)","EGFR×HER3双抗ADC","鼻咽癌(后线)","已获批上市",0,"鼻咽癌后线获批上市","2026-06-22","食管鳞癌/三阴乳腺癌NDA审评","2026下半年","公司公告+国家药监局","已上市(2026-06)","已上市(2026-06)","已上市(2026-06)","鼻咽癌已兑现；新适应症按NDA受理后12-18个月",""],
+["688506.SH","百利天恒","BL-M07D1","HER2 ADC","HER2乳腺癌(新辅助/术后辅助)","III期临床(多项并行入组中)",3,"单药III期+术后辅助III期+对标DS-8201 II期并行","2026-07","最早III期读出或II期附条件报产","2027-2028","公司公告","2028上半年","2028下半年","2030","加速路径:大适应症多中心并行+对标DS-8201 II期可附条件批准；顺利=II期附条件报产4+4月；正常=III期入组1.5年+数据+NDA6月；拖延=完整III期+发补","加速"],
+["688506.SH","百利天恒","BL-M14D1","DLL3 ADC","小细胞肺癌(广泛期)","III期刚启动+II期数据亮眼",3,"III期启动+ASCO二线ORR78.6%/PFS8.1月","2026-06","单臂II期报产或III期入组推进","2027-2028","公司公告+ASCO","2028下半年","2029上半年","2031","加速路径:ORR78.6%亮眼+罕见瘤种符合附条件批准；顺利=单臂II期报产3+4月；正常=补充数据+优先审评6月；拖延=完整III期3年+发补；DLL3风险已部分证伪下调","加速"],
+["9926.HK","康方生物","AK112(依沃西)","PD-1/VEGF双抗","NSCLC一线等实体瘤","国内NDA报产中+美国BLA已受理",2,"HARMONI-6 ASCO公布OS数据+FDA受理BLA+5次突破性疗法","2026-05-31","国内NDA获批/美国BLA审评","国内2026年内/美国2027","公司公告+ASCO+FDA","2026Q4(国内)/2027Q1(美国)","2027上半年(国内)/2027下半年(美国)","2028","国内NDA已报产+5次突破性疗法优先审评6月；美国BLA已受理标准10-12月；加速:突破性可优先审评；拖延含CRL发补","加速"],
+["6990.HK","科伦博泰","SKB264(芦康沙妥珠)","Trop2 ADC","三阴乳腺癌/NSCLC","已获批(三阴乳癌)+III期(多癌种)",1,"三阴乳腺癌获批上市","2024-11","NSCLC等新适应症III期(默沙东17项全球III期)","2026-2027","公司公告+默沙东","已上市(三阴乳癌2024-11)","2026下半年(NSCLC)","2028","核心已兑现；NSCLC新适应症默沙东17项III期推进+突破性疗法可加速->2026读出->NDA->优先审评","加速"],
+["6855.HK","亚盛医药","奥雷巴替尼","三代BCR-ABL","慢粒(CML T315I)","国内已获批+美国FDA批准全球注册III期",3,"获FDA批准全球注册III期+武田BD(最高13亿美元)+纳斯达克上市","2024-02-14","FDA全球III期推进/武田行权","2026-2027","公司公告+FDA","国内已上市","2027下半年(美国)","2029","国内已兑现；美国III期2024启动+罕见突变+RPDD/RMAT可加速->入组2年->BLA加速批准6-8月；拖延含武田行权不确定","加速"],
+["688321.SH","微芯生物","西格列他钠","PPAR全激动剂","2型糖尿病(已上市)+MASH(II期)","已获批(糖尿病)+II期(MASH)",4,"糖尿病适应症获批+医保;MASH II期结果2024AASLD口头报告","2024","MASH III期启动/推进","2026起","公司公告+AASLD","糖尿病已上市","2029(MASH)","2032","糖尿病已兑现；MASH无加速路径(终点复杂慢病)->III期启动1年+入组2.5年(慢病)+NDA+12月；MASH终点复杂易拖延",""],
+["688192.SH","迪哲医药","舒沃替尼","EGFR exon20ins TKI","NSCLC一线(EGFR exon20ins)","III期达终点(报产中)",2,"WU-KONG28 III期达主要终点","2026-03","国内一线NDA递交","待公告","公司公告+ASCO","2026Q4","2027Q1","2028","III期2026-03达终点+NDA递交+突破性疗法优先审评6月；拖延含CDE要求补充数据","加速"],
+["688382.SH","益方生物","格索雷塞(D-1553)","KRAS G12C","NSCLC二线","已获批上市(安方宁)",0,"获批上市+纳入医保","2024-11","后续适应症/联合疗法","暂无公开日期","公司公告","已上市(2024-11)","已上市(2024-11)","已上市(2024-11)","核心已兑现；后续适应症待III期推进",""],
+["688443.SH","智翔金泰","GR1801(金速希)","狂犬病双抗","狂犬病被动免疫","已获批上市",0,"获批上市(金速希)","2026-06-22","GR1802(自免适应症)申报","2026起","公司公告+国家药监局","已上市(2026-06)","已上市(2026-06)","已上市(2026-06)","核心已兑现；GR1802自免适应症按各适应症III期节奏",""],
+["688062.SH","迈威生物","9MW2821","Nectin-4 ADC","尿路上皮癌等","III期(入组超1900例)",3,"III期入组推进+FDA快速通道+突破性疗法","2026-06","2项适应症NDA递交","2026年内","公司公告+ESMO","2027上半年","2027下半年","2030","加速路径:III期入组近完成+FDA快速通道+突破性疗法；顺利=2026数据+NDA3月+优先审评4月；正常=NDA6月+优先审评6月；拖延=发补/适应症收窄","加速"],
+["002773.SZ","康弘药业","康柏西普","抗VEGF融合蛋白","湿性AMD等眼科","已获批上市",0,"国内长期销售","已兑现","海外再出海/新适应症","暂无公开日期","公司公告","已上市","已上市","已上市","核心已兑现；海外曾III期失败，再出海需重做",""],
+["688331.SH","荣昌生物","维迪西妥单抗","HER2 ADC","胃癌/乳腺癌/尿路上皮癌","已获批上市",1,"乳腺癌适应症获批","2026","新适应症(HER2低表达胃癌)III期","2026-2027","公司公告","已上市","2027(新适应症)","2029","核心已兑现；HER2低表达胃癌III期+突破性疗法可加速->数据->NDA->优先审评；竞争激烈(Enhertu)可能影响推进优先级","加速"],
+["688266.SH","泽璟制药","杰克替尼(吉卡昔替尼)","JAK1/3","骨髓纤维化/斑秃","已获批(斑秃)+NDA受理(骨髓纤维化)",1,"重度斑秃获批上市","2026","骨髓纤维化NDA获批","2026下半年","公司公告","2026Q4(骨髓纤维化)","2027Q1","2027下半年","骨髓纤维化NDA已受理+优先审评6-9月；拖延含发补",""],
+["002653.SZ","海思科","环泊酚","亚型选择性麻醉药","手术麻醉/ICU镇静","已获批上市",1,"国内获批上市+美国III期","已兑现","美国FDA申报","2026-2027","公司公告","国内已上市","2027下半年(美国)","2029","国内已兑现；美国III期推进->数据->NDA->FDA审评；麻醉药FDA审评相对顺",""],
+["1801.HK","信达生物","IBI363(PD-1/IL-2α)","PD-1/IL-2α融合蛋白","实体瘤(免疫IO)","III期(推进中)",4,"III期推进中(全球多中心)","2026-06","III期数据读出","2027-2028","公司公告+ASCO","2028下半年","2029下半年","2031","III期推进中+IO竞争激烈无显著加速路径->入组2年+数据6月+NDA+优先审评9月；拖延含IL-2改造毒性",""],
+["9926.HK","康方生物","卡度尼利","PD-1/CTLA-4双抗","宫颈癌/肝癌等","已获批上市",0,"国内获批(宫颈癌/肝癌)","已兑现","新适应症III期推进","2026-2027","公司公告","已上市","已上市","已上市","核心已兑现；新适应症按III期节奏",""],
+["2162.HK","康诺亚","司普奇拜单抗(CM310)","IL-4Rα抗体","特应性皮炎/哮喘/鼻息肉","已获批(AD)+III期(哮喘等)",1,"特应性皮炎获批上市","2024-09","哮喘/慢鼻窦炎III期推进","2026-2027","公司公告","已上市(AD2024-09)","2026下半年(哮喘)","2028","AD已兑现；哮喘III期推进+突破性疗法可加速->数据->NDA->优先审评；拖延含竞品多(度普利尤)","加速"],
+["1530.HK","三生制药","SSGJ-707","PD-1/VEGF双抗","实体瘤(IO)","III期(启动中)",4,"辉瑞60亿美元BD授权+III期启动","2026","III期入组推进/数据","2028-2029","公司公告+辉瑞","2029下半年","2030下半年","2032","III期2026启动+辉瑞背书但无显著加速路径->入组2.5年+数据+NDA+审评9月；拖延含AK112竞争/III期入组慢",""],
+["2096.HK","先声药业","先必新(依达拉奉右旋醇)","脑卒中复方","急性缺血性脑卒中","已获批(注射剂+舌下片)",0,"舌下片获批(序贯疗法)","2023-12","新适应症(出血性卒中)III期","2026-2027","公司公告","已上市","已上市","已上市","核心已兑现；出血性卒中新适应症待III期",""],
+["9966.HK","康宁杰瑞","恩沃利单抗(KN035)","PD-L1单域抗体(皮下)","MSI-H实体瘤","已获批上市",0,"获批上市(全球首个皮下PD-L1)","2021-11","新适应症推进","2026起","公司公告+先声+思路迪","已上市(2021-11)","已上市(2021-11)","已上市(2021-11)","核心已兑现；三方合作模式",""],
+["2126.HK","映恩生物","DB-1303(BNT323)","HER2 ADC","HER2乳腺癌","III期达终点+NDA已提交",1,"III期达主要终点+提交NDA+BioNTech合作","2026-05","NDA获批(首款商业化)","2026年内","公司公告+BioNTech","2026Q4","2027Q1","2027下半年","III期已达终点+NDA已提交+优先审评6-12月；拖延含发补/HER2赛道竞争激烈(Enhertu)","加速"],
+["1952.HK","云顶新耀","耐赋康(Nefecon)","布地奈德肠溶(靶向IgA肾病)","IgA肾病","已获批上市+纳入医保",0,"NMPA获批+纳入医保(2024-11)","已兑现","商业化放量/新适应症","2026起","公司公告","已上市(2024-11)","已上市(2024-11)","已上市(2024-11)","核心已兑现；全球首个IgA肾病对因药；首仿药(海南合瑞)已上市竞争",""],
+["1177.HK","中国生物制药","罗伐昔替尼","JAK/ROCK双靶点","纤维化/自免","III期(推进中)",4,"III期推进中(正大天晴)","2026-06","III期数据读出","2028","公司公告","2029下半年","2030下半年","2032","III期推进中+纤维化无显著加速路径->入组2.5年+数据+NDA+12月；拖延含纤维化终点复杂/JAK安全性审查",""],
+["1093.HK","石药集团","mRNA递送载体","mRNA疫苗/递送","肿瘤疫苗等","早期临床(I/II期)",5,"I/II期临床推进","2026-06","II期数据/III期启动","2027-2028","公司公告","2031","2032","2034","早期临床+无加速路径->II期2年+III期3年+数据+NDA+12月；拖延含mRNA肿瘤疫苗历史无成药/技术不确定",""]
+];
+
+const tbody=document.getElementById('tbody');
+let filter={market:'all',status:'all'};
+
+function marketOf(code){return code.endsWith('.SH')||code.endsWith('.SZ')?'a':'h'}
+function statusOf(step){
+  if(step===0)return'done'; if(step<=1)return'soon';
+  if(step<=3)return'mid'; return'early';
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function renderStats(){
+  const counts={0:0,1:0,2:0,3:0,4:0,5:0};
+  DATA.forEach(r=>counts[r[6]]++);
+  const total=DATA.length;
+  const done=counts[0];
+  const soon=counts[1];
+  const mid=counts[2]+counts[3];
+  const early=counts[4]+counts[5];
+  const accel=DATA.filter(r=>r[16]==='加速').length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat total"><div class="num">${total}</div><div class="lbl">FIC管线总数</div></div>
+    <div class="stat s0"><div class="num">${done}</div><div class="lbl">已上市(步骤0)</div></div>
+    <div class="stat s1"><div class="num">${soon}</div><div class="lbl">临门一脚(步骤≤1)</div></div>
+    <div class="stat s2"><div class="num">${mid}</div><div class="lbl">III期中(步骤2-3)</div></div>
+    <div class="stat s4"><div class="num">${early}</div><div class="lbl">早期(步骤≥4)</div></div>
+    <div class="stat total"><div class="num" style="color:#67c23a">${accel}</div><div class="lbl">纳入加速路径</div></div>
+  `;
+}
+
+function render(){
+  tbody.innerHTML='';
+  DATA.forEach((r,idx)=>{
+    const m=marketOf(r[0]); const s=statusOf(r[6]);
+    if(filter.market!=='all'&&filter.market!==m)return;
+    if(filter.status!=='all'&&filter.status!==s)return;
+    const step=r[6];
+    const isDone=step===0;
+    const tr=document.createElement('tr');
+    tr.style.cursor='pointer';
+    const tSmooth=r[12],tNormal=r[13],tDelay=r[14];
+    const cs=(t)=>t.indexOf('已上市')>=0?'t-done':'t-smooth';
+    const cn=(t)=>t.indexOf('已上市')>=0?'t-done':'t-normal';
+    const cd=(t)=>t.indexOf('已上市')>=0?'t-done':'t-delay';
+    const accelTag=r[16]==='加速'?'<span class="accel">加速</span>':'';
+    tr.innerHTML=`
+      <td class="code">${r[0]}</td>
+      <td class="name">${r[1]}<span class="tag ${m==='a'?'a':'h'}">${m==='a'?'A股':'港股'}</span>${accelTag}</td>
+      <td class="fic">${r[2]}</td>
+      <td>${r[3]}</td>
+      <td>${r[4]}</td>
+      <td class="stage ${isDone?'done':''}">${r[5]}</td>
+      <td><span class="step s${step}">${step}</span></td>
+      <td class="t-time ${cs(tSmooth)}">${tSmooth}</td>
+      <td class="t-time ${cn(tNormal)}">${tNormal}</td>
+      <td class="t-time ${cd(tDelay)}">${tDelay}</td>
+      <td class="muted">${r[10]}</td>
+      <td class="muted">${r[11]}</td>
+      <td class="muted">${m==='a'?'A':'H'}</td>`;
+    const dr=document.createElement('tr');
+    dr.className='detail-row';dr.style.display='none';
+    dr.innerHTML=`<td colspan="13"><div class="detail-box">
+      <b>最新进展：</b>${r[7]}（${r[8]}）<br>
+      <b>剩余关键步骤：</b>${r[7]} <b>步骤数：</b>${step}<br>
+      <b>信息来源：</b>${r[12+0+2]?r[12]:'-'}<br>
+      <b>估算依据：</b>${r[15]}${r[16]==='加速'?'<br><b style="color:#67c23a">加速路径：已纳入附条件批准/单臂报产等加速审批路径</b>':''}
+    </div></td>`;
+    tr.onclick=()=>{dr.style.display=dr.style.display==='none'?'':'none'};
+    tbody.appendChild(tr);tbody.appendChild(dr);
+  });
+  if(tbody.children.length===0)tbody.innerHTML='<tr><td colspan="13" style="text-align:center;padding:30px;color:#909399">无符合条件的数据</td></tr>';
+}
+
+document.querySelectorAll('.btn').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll(`.btn[data-f="${b.dataset.f}"]`).forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    filter[b.dataset.f]=b.dataset.v;
+    render();
+  };
+});
+
+renderStats();render();
+</script>
+</body>
+</html>

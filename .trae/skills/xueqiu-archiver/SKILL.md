@@ -74,3 +74,21 @@ description: "Archives a Xueqiu (雪球) user's full post history via browser-si
 
 - `export_md.py`：`text` 字段做 HTML→纯文本清洗；文件名 `{date}_{id}_{title}.md`；frontmatter 含 views/likes/comments/forwards/type；`index.csv` 全量索引
 - 雪球帖子含转引互动（读者提问+马老师回答的问答体），是相比公众号源的独特价值
+
+## 八、增量更新协议（日常追更，2026-10 实战固化）
+
+适用场景：全量存档已完成，之后作者发新帖需要追更。项目侧配套件（以马靖昊项目为例）：
+`refresh_xueqiu.sh`（shell 编排：status/serve/export 三命令）+ `runners/browser_refresh_timeline.js`、`runners/browser_fetch_round.js`（直接粘贴进 browser_evaluate）。
+
+**流程三步（浏览器侧两步 + shell 一步）：**
+
+1. **刷新时间线**：浏览器打开 `https://www.xueqiu.com/u/{uid}` 过 WAF 后，evaluate `runners/browser_refresh_timeline.js`——拉取 timeline 第 1 页并 POST 上传为 `raw/timeline/refresh_YYYYMMDD.json`。**上传即生效**：todo 接口扫描全部 timeline 文件，新 id 自动进入待抓清单（断点协议天然支持增量，无需改服务器代码）。跨页时改 `page=2` 再传 `_p2` 文件。
+2. **跑抓取轮次**：evaluate `runners/browser_fetch_round.js`（todo→show.json→upload，25 篇/轮）。**WAF 配额纪律（实测）：约 25 请求/分钟窗口——每轮 25 篇 + 轮间冷却 ≥75s 可达 100% 成功率；不冷却直接连跑则整轮 0 命中**。返回 `{"ok":N,"bad":N}`，bad 为瞬时挑战、下轮自动重试，直至 todo 清零。
+3. **导出收尾**：`./refresh_xueqiu.sh export`——重导 md + index.csv，与 `raw/meta/last_refresh.json` 水位对比展示本次新增清单。
+
+**关键经验（2026-10 实测）：**
+- **必须用 `www.xueqiu.com` 域名**调 API：不带 www 的裸域对 API 路径直接返回 WAF JS 挑战页（`<textarea id="renderData">`），带 www 则正常返回 JSON——这是"纯 HTTP 客户端过不去、浏览器内也可能翻车"的根因之一
+- 单发/少量请求几乎总能成功；失败是配额型瞬时现象，靠断点协议下轮重试消化，无需人工干预
+- 页面长挂后 IM comet 长连接超时可能让 evaluate 报错（`net::ERR_ABORTED`）——先跑一次简单 evaluate（`location.href`）确认页面存活，死了就重新 navigate
+- 服务端 todo `limit` 参数封顶 200：**核对真实剩余量用磁盘文件数或本地脚本重算，别信 limit=1000 的返回长度**
+- 粘贴修改 JS 后务必先在 Exec 沙箱 `new Function(script)` 语法检查（括号配平是头号事故源）
